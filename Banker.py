@@ -1,89 +1,57 @@
-class BankersAlgorithm:
-    def __init__(self, processes, resources):
-        self.processes = processes
-        self.resources = resources
-        self.available = []
-        self.max_need = []
-        self.allocation = []
-        self.need = []
+def is_safe(processes, available, max_need, allocation):
+    n = len(processes)  
+    m = len(available) 
     
-    def initialize_values(self, available, max_need, allocation):
-        self.available = available
-        self.max_need = max_need
-        self.allocation = allocation
-        self.need = []
-        for i in range(self.processes):
-            self.need.append([])
-            for j in range(self.resources):
-                self.need[i].append(self.max_need[i][j] - self.allocation[i][j])
-    
-    def is_safe_state(self):
-        work = self.available.copy()
-        finish = [False] * self.processes
-        safe_sequence = []
-        
-        while True:
-            found = False
-            for p in range(self.processes):
-                if not finish[p] and self.is_need_satisfied(p, work):
-                    for r in range(self.resources):
-                        work[r] += self.allocation[p][r]
-                    finish[p] = True
-                    safe_sequence.append(p)
-                    found = True
-            if not found:
-                break
-        
-        return all(finish), safe_sequence
-    
-    def is_need_satisfied(self, process, work):
-        for r in range(self.resources):
-            if self.need[process][r] > work[r]:
-                return False
-        return True
-    
-    def request_resources(self, process, request):
-        for r in range(self.resources):
-            if request[r] > self.need[process][r]:
-                return False, "Request exceeds maximum claim"
-            if request[r] > self.available[r]:
-                return False, "Resources unavailable"
-        
-        for r in range(self.resources):
-            self.available[r] -= request[r]
-            self.allocation[process][r] += request[r]
-            self.need[process][r] -= request[r]
-        
-        is_safe, sequence = self.is_safe_state()
-        
-        if is_safe:
-            return True, f"Allocation successful. Safe sequence: {sequence}"
-        
-        for r in range(self.resources):
-            self.available[r] += request[r]
-            self.allocation[process][r] -= request[r]
-            self.need[process][r] += request[r]
-        
-        return False, "Unsafe state"
+    need = [[0 for j in range(m)] for i in range(n)]
+    for i in range(n):
+        for j in range(m):
+            need[i][j] = max_need[i][j] - allocation[i][j]
+
+    finish = [False] * n
+    safe_sequence = []
+    work = available.copy()
+
+    while len(safe_sequence) < n:
+        allocated_in_this_round = False
+        for i in range(n):
+            if not finish[i]:
+                if all(need[i][j] <= work[j] for j in range(m)):
+                    for j in range(m):
+                        work[j] += allocation[i][j]
+                    safe_sequence.append(processes[i])
+                    finish[i] = True
+                    allocated_in_this_round = True
+                    break
+        if not allocated_in_this_round:
+            print("System is in a deadlock!")
+            print("System is NOT in a safe state!")
+            return False, []
+
+    print("System is in a safe state.")
+    print(f"Safe sequence is: {safe_sequence}")
+    return True, safe_sequence
+
+def main():
+    processes = ['P0', 'P1', 'P2', 'P3', 'P4']
+    available = [3, 3, 2]
+
+    max_need = [
+        [7, 5, 3],
+        [3, 2, 2],
+        [9, 0, 2],
+        [2, 2, 2],
+        [4, 3, 3]
+    ]
+
+    allocation = [
+        [0, 1, 0],
+        [2, 0, 0],
+        [3, 0, 2],
+        [2, 1, 1],
+        [0, 0, 2]
+    ]
+
+    is_safe(processes, available, max_need, allocation)
 
 if __name__ == "__main__":
-    processes = 5
-    resources = 3
-    
-    available = [3, 3, 2]
-    max_need = [[7,5,3], [3,2,2], [9,0,2], [2,2,2], [4,3,3]]
-    allocation = [[0,1,0], [2,0,0], [3,0,2], [2,1,1], [0,0,2]]
-    
-    banker = BankersAlgorithm(processes, resources)
-    banker.initialize_values(available, max_need, allocation)
-    
-    is_safe, sequence = banker.is_safe_state()
-    print(f"System state: {'safe' if is_safe else 'unsafe'}")
-    if is_safe:
-        print(f"Safe sequence: {sequence}")
-    
-    process = 1
-    request = [1, 0, 2]
-    success, message = banker.request_resources(process, request)
-    print(f"\nProcess {process} requesting {request}")
-    print(message)
+    main()
